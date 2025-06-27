@@ -1,0 +1,294 @@
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { Plus, Copy, ExternalLink } from 'lucide-react';
+
+interface ContentLink {
+  id: string;
+  original_url: string;
+  short_code: string;
+  title: string;
+  description: string | null;
+  views_count: number;
+  clicks_count: number;
+  created_at: string;
+}
+
+export default function ContentProviderDashboard() {
+  const [contentLinks, setContentLinks] = useState<ContentLink[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    originalUrl: '',
+    title: '',
+    description: '',
+  });
+
+  useEffect(() => {
+    fetchContentLinks();
+  }, []);
+
+  const fetchContentLinks = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: provider } = await supabase
+        .from('content_providers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!provider) return;
+
+      const { data, error } = await supabase
+        .from('content_links')
+        .select('*')
+        .eq('content_provider_id', provider.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      setContentLinks(data || []);
+    } catch (error) {
+      toast.error('Failed to fetch content links');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: provider } = await supabase
+        .from('content_providers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!provider) return;
+
+      // Generate short code
+      const { data: shortCodeData } = await supabase.rpc('generate_short_code');
+      
+      const { error } = await supabase
+        .from('content_links')
+        .insert({
+          content_provider_id: provider.id,
+          original_url: formData.originalUrl,
+          short_code: shortCodeData,
+          title: formData.title,
+          description: formData.description || null,
+        });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.success('Short link created successfully!');
+      setFormData({ originalUrl: '', title: '', description: '' });
+      setIsDialogOpen(false);
+      fetchContentLinks();
+    } catch (error) {
+      toast.error('Failed to create short link');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (shortCode: string) => {
+    const shortUrl = `${window.location.origin}/g/${shortCode}`;
+    navigator.clipboard.writeText(shortUrl);
+    toast.success('Short URL copied to clipboard!');
+  };
+
+  if (loading && contentLinks.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">Content Provider Dashboard</h2>
+          <p className="text-gray-600">Manage your content links and track performance</p>
+        </div>
+        
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Short Link
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Short Link</DialogTitle>
+              <DialogDescription>
+                Convert your content URL into a shareable ad-supported link
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateLink} className="space-y-4">
+              <div>
+                <Label htmlFor="originalUrl">Original URL</Label>
+                <Input
+                  id="originalUrl"
+                  type="url"
+                  value={formData.originalUrl}
+                  onChange={(e) => setFormData(prev => ({ ...prev, originalUrl: e.target.value }))}
+                  placeholder="https://yoursite.com/article/..."
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Article title"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Brief description of the content"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Creating...' : 'Create Short Link'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Links</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{contentLinks.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {contentLinks.reduce((sum, link) => sum + link.views_count, 0)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Clicks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {contentLinks.reduce((sum, link) => sum + link.clicks_count, 0)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Content Links Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Content Links</CardTitle>
+          <CardDescription>
+            Manage and track your ad-supported content links
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {contentLinks.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">No content links created yet</p>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>Create Your First Link</Button>
+                </DialogTrigger>
+              </Dialog>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Short Link</TableHead>
+                  <TableHead>Views</TableHead>
+                  <TableHead>Clicks</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contentLinks.map((link) => (
+                  <TableRow key={link.id}>
+                    <TableCell className="font-medium">{link.title}</TableCell>
+                    <TableCell>
+                      <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+                        /g/{link.short_code}
+                      </code>
+                    </TableCell>
+                    <TableCell>{link.views_count}</TableCell>
+                    <TableCell>{link.clicks_count}</TableCell>
+                    <TableCell>
+                      {new Date(link.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyToClipboard(link.short_code)}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(link.original_url, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
