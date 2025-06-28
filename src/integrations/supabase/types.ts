@@ -918,6 +918,16 @@ export type Database = {
         Args: { conversation_uuid: string }
         Returns: boolean
       }
+      verify_counter_consistency: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          table_name: string
+          record_id: string
+          stored_count: number
+          actual_count: number
+          discrepancy: number
+        }[]
+      }
     }
     Enums: {
       ad_status: "active" | "inactive" | "pending"

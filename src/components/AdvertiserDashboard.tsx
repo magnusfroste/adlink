@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
+import CounterMonitor from './CounterMonitor';
 
 interface Advertisement {
   id: string;
@@ -29,6 +29,7 @@ interface Advertisement {
 export default function AdvertiserDashboard() {
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -71,7 +72,13 @@ export default function AdvertiserDashboard() {
       toast.error('Failed to fetch advertisements');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchAdvertisements();
   };
 
   const handleCreateAd = async (e: React.FormEvent) => {
@@ -157,92 +164,99 @@ export default function AdvertiserDashboard() {
           <p className="text-gray-600">Manage your advertisements and track performance</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Advertisement
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Advertisement</DialogTitle>
-              <DialogDescription>
-                Create a new ad that will be shown to content viewers
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateAd} className="space-y-4">
-              <div>
-                <Label htmlFor="title">Advertisement Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="My Advertisement"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label>Advertisement Type</Label>
-                <Select 
-                  value={formData.adType} 
-                  onValueChange={(value: 'image' | 'html') => setFormData(prev => ({ ...prev, adType: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="image">Image Advertisement</SelectItem>
-                    <SelectItem value="html">HTML Advertisement</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formData.adType === 'image' ? (
-                <div>
-                  <Label htmlFor="imageUrl">Image URL</Label>
-                  <Input
-                    id="imageUrl"
-                    type="url"
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-                    placeholder="https://example.com/ad-image.jpg"
-                    required
-                  />
-                </div>
-              ) : (
-                <div>
-                  <Label htmlFor="htmlContent">HTML Content</Label>
-                  <Textarea
-                    id="htmlContent"
-                    value={formData.htmlContent}
-                    onChange={(e) => setFormData(prev => ({ ...prev, htmlContent: e.target.value }))}
-                    placeholder="<div>Your HTML ad content here...</div>"
-                    rows={6}
-                    required
-                  />
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="clickUrl">Click URL</Label>
-                <Input
-                  id="clickUrl"
-                  type="url"
-                  value={formData.clickUrl}
-                  onChange={(e) => setFormData(prev => ({ ...prev, clickUrl: e.target.value }))}
-                  placeholder="https://yoursite.com/landing-page"
-                  required
-                />
-              </div>
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Advertisement'}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Advertisement
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Advertisement</DialogTitle>
+                <DialogDescription>
+                  Create a new ad that will be shown to content viewers
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateAd} className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Advertisement Title</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="My Advertisement"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label>Advertisement Type</Label>
+                  <Select 
+                    value={formData.adType} 
+                    onValueChange={(value: 'image' | 'html') => setFormData(prev => ({ ...prev, adType: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="image">Image Advertisement</SelectItem>
+                      <SelectItem value="html">HTML Advertisement</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.adType === 'image' ? (
+                  <div>
+                    <Label htmlFor="imageUrl">Image URL</Label>
+                    <Input
+                      id="imageUrl"
+                      type="url"
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
+                      placeholder="https://example.com/ad-image.jpg"
+                      required
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="htmlContent">HTML Content</Label>
+                    <Textarea
+                      id="htmlContent"
+                      value={formData.htmlContent}
+                      onChange={(e) => setFormData(prev => ({ ...prev, htmlContent: e.target.value }))}
+                      placeholder="<div>Your HTML ad content here...</div>"
+                      rows={6}
+                      required
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="clickUrl">Click URL</Label>
+                  <Input
+                    id="clickUrl"
+                    type="url"
+                    value={formData.clickUrl}
+                    onChange={(e) => setFormData(prev => ({ ...prev, clickUrl: e.target.value }))}
+                    placeholder="https://yoursite.com/landing-page"
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Advertisement'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -276,6 +290,9 @@ export default function AdvertiserDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Counter Monitor */}
+      <CounterMonitor />
 
       {/* Advertisements Table */}
       <Card>

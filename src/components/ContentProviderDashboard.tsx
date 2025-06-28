@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Copy, ExternalLink } from 'lucide-react';
+import { Plus, Copy, ExternalLink, RefreshCw } from 'lucide-react';
+import CounterMonitor from './CounterMonitor';
 
 interface ContentLink {
   id: string;
@@ -25,6 +25,7 @@ interface ContentLink {
 export default function ContentProviderDashboard() {
   const [contentLinks, setContentLinks] = useState<ContentLink[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     originalUrl: '',
@@ -65,7 +66,13 @@ export default function ContentProviderDashboard() {
       toast.error('Failed to fetch content links');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchContentLinks();
   };
 
   const handleCreateLink = async (e: React.FormEvent) => {
@@ -135,57 +142,64 @@ export default function ContentProviderDashboard() {
           <p className="text-gray-600">Manage your content links and track performance</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Short Link
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Short Link</DialogTitle>
-              <DialogDescription>
-                Convert your content URL into a shareable ad-supported link
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleCreateLink} className="space-y-4">
-              <div>
-                <Label htmlFor="originalUrl">Original URL</Label>
-                <Input
-                  id="originalUrl"
-                  type="url"
-                  value={formData.originalUrl}
-                  onChange={(e) => setFormData(prev => ({ ...prev, originalUrl: e.target.value }))}
-                  placeholder="https://yoursite.com/article/..."
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Article title"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description of the content"
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Short Link'}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Short Link
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Short Link</DialogTitle>
+                <DialogDescription>
+                  Convert your content URL into a shareable ad-supported link
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateLink} className="space-y-4">
+                <div>
+                  <Label htmlFor="originalUrl">Original URL</Label>
+                  <Input
+                    id="originalUrl"
+                    type="url"
+                    value={formData.originalUrl}
+                    onChange={(e) => setFormData(prev => ({ ...prev, originalUrl: e.target.value }))}
+                    placeholder="https://yoursite.com/article/..."
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Article title"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description (Optional)</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Brief description of the content"
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Creating...' : 'Create Short Link'}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -219,6 +233,9 @@ export default function ContentProviderDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Counter Monitor */}
+      <CounterMonitor />
 
       {/* Content Links Table */}
       <Card>
