@@ -127,7 +127,7 @@ export default function Gateway() {
     return <Navigate to="/" replace />;
   }
 
-  const progressValue = ((3 - countdown) / 3) * 100;
+  const progressValue = ((5 - countdown) / 5) * 100;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
