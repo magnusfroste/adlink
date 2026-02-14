@@ -27,6 +27,19 @@ export default function Dashboard() {
         return;
       }
 
+      // Check if user is admin — redirect to /admin
+      const { data: adminRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (adminRole) {
+        navigate('/admin');
+        return;
+      }
+
       // Check if user has a content provider profile
       const { data: contentProvider } = await supabase
         .from('content_providers')
