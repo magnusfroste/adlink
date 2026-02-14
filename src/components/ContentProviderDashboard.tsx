@@ -10,15 +10,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Plus, Copy, ExternalLink, RefreshCw } from 'lucide-react';
 import CounterMonitor from './CounterMonitor';
+import CategoryPicker, { CategoryBadges } from './CategoryPicker';
+import { useCategories, saveContentLinkCategories, getContentLinkCategoryIds } from '@/hooks/useCategories';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ContentLink = Tables<'content_links'>;
 
 export default function ContentProviderDashboard() {
   const [contentLinks, setContentLinks] = useState<ContentLink[]>([]);
+  const [linkCategories, setLinkCategories] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const { categories } = useCategories();
   const [formData, setFormData] = useState({
     originalUrl: '',
     title: '',
@@ -53,7 +58,15 @@ export default function ContentProviderDashboard() {
         return;
       }
 
-      setContentLinks(data || []);
+      const links = data || [];
+      setContentLinks(links);
+
+      // Fetch categories for all links
+      const catMap: Record<string, string[]> = {};
+      await Promise.all(links.map(async (link) => {
+        catMap[link.id] = await getContentLinkCategoryIds(link.id);
+      }));
+      setLinkCategories(catMap);
     } catch (error) {
       toast.error('Failed to fetch content links');
     } finally {
@@ -94,7 +107,7 @@ export default function ContentProviderDashboard() {
 
       const shortCode = generateShortCode();
 
-      const { error } = await supabase
+      const { data: newLink, error } = await supabase
         .from('content_links')
         .insert({
           provider_id: provider.id,
@@ -102,15 +115,22 @@ export default function ContentProviderDashboard() {
           short_code: shortCode,
           title: formData.title,
           description: formData.description || null,
-        });
+        })
+        .select()
+        .single();
 
       if (error) {
         toast.error(error.message);
         return;
       }
 
+      if (newLink && selectedCategories.length > 0) {
+        await saveContentLinkCategories(newLink.id, selectedCategories);
+      }
+
       toast.success('Short link created successfully!');
       setFormData({ originalUrl: '', title: '', description: '' });
+      setSelectedCategories([]);
       setIsDialogOpen(false);
       fetchContentLinks();
     } catch (error) {
@@ -129,7 +149,7 @@ export default function ContentProviderDashboard() {
   if (loading && contentLinks.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -138,8 +158,8 @@ export default function ContentProviderDashboard() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Content Provider Dashboard</h2>
-          <p className="text-gray-600">Manage your content links and track performance</p>
+          <h2 className="text-3xl font-bold text-foreground">Content Provider Dashboard</h2>
+          <p className="text-muted-foreground">Manage your content links and track performance</p>
         </div>
         
         <div className="flex gap-2">
@@ -193,6 +213,10 @@ export default function ContentProviderDashboard() {
                     placeholder="Brief description of the content"
                   />
                 </div>
+                <div>
+                  <Label>Categories</Label>
+                  <CategoryPicker selected={selectedCategories} onChange={setSelectedCategories} />
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating...' : 'Create Short Link'}
                 </Button>
@@ -241,25 +265,19 @@ export default function ContentProviderDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Your Content Links</CardTitle>
-          <CardDescription>
-            Manage and track your ad-supported content links
-          </CardDescription>
+          <CardDescription>Manage and track your ad-supported content links</CardDescription>
         </CardHeader>
         <CardContent>
           {contentLinks.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">No content links created yet</p>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>Create Your First Link</Button>
-                </DialogTrigger>
-              </Dialog>
+              <p className="text-muted-foreground mb-4">No content links created yet</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
+                  <TableHead>Categories</TableHead>
                   <TableHead>Short Link</TableHead>
                   <TableHead>Views</TableHead>
                   <TableHead>Clicks</TableHead>
@@ -272,29 +290,20 @@ export default function ContentProviderDashboard() {
                   <TableRow key={link.id}>
                     <TableCell className="font-medium">{link.title}</TableCell>
                     <TableCell>
-                      <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                        /g/{link.short_code}
-                      </code>
+                      <CategoryBadges categoryIds={linkCategories[link.id] || []} categories={categories} />
+                    </TableCell>
+                    <TableCell>
+                      <code className="bg-muted px-2 py-1 rounded text-sm">/g/{link.short_code}</code>
                     </TableCell>
                     <TableCell>{link.view_count}</TableCell>
                     <TableCell>{link.click_count}</TableCell>
-                    <TableCell>
-                      {new Date(link.created_at).toLocaleDateString()}
-                    </TableCell>
+                    <TableCell>{new Date(link.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(link.short_code)}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => copyToClipboard(link.short_code)}>
                           <Copy className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(link.original_url, '_blank')}
-                        >
+                        <Button size="sm" variant="outline" onClick={() => window.open(link.original_url, '_blank')}>
                           <ExternalLink className="h-4 w-4" />
                         </Button>
                       </div>
