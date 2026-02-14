@@ -241,6 +241,39 @@ export type Database = {
           },
         ]
       }
+      content_link_blocked_categories: {
+        Row: {
+          category_id: string
+          content_link_id: string
+          id: string
+        }
+        Insert: {
+          category_id: string
+          content_link_id: string
+          id?: string
+        }
+        Update: {
+          category_id?: string
+          content_link_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_link_blocked_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_link_blocked_categories_content_link_id_fkey"
+            columns: ["content_link_id"]
+            isOneToOne: false
+            referencedRelation: "content_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_link_categories: {
         Row: {
           category_id: string

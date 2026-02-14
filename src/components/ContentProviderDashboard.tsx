@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Copy, ExternalLink, RefreshCw } from 'lucide-react';
+import { Plus, Copy, ExternalLink, RefreshCw, ShieldAlert } from 'lucide-react';
 import CounterMonitor from './CounterMonitor';
 import CategoryPicker, { CategoryBadges } from './CategoryPicker';
-import { useCategories, saveContentLinkCategories, getContentLinkCategoryIds } from '@/hooks/useCategories';
+import { useCategories, saveContentLinkCategories, getContentLinkCategoryIds, saveBlockedCategories, getBlockedCategoryIds } from '@/hooks/useCategories';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ContentLink = Tables<'content_links'>;
@@ -19,10 +19,14 @@ type ContentLink = Tables<'content_links'>;
 export default function ContentProviderDashboard() {
   const [contentLinks, setContentLinks] = useState<ContentLink[]>([]);
   const [linkCategories, setLinkCategories] = useState<Record<string, string[]>>({});
+  const [blockedCategories, setBlockedCategories] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedBlocked, setSelectedBlocked] = useState<string[]>([]);
+  const [brandSafetyLinkId, setBrandSafetyLinkId] = useState<string | null>(null);
+  const [brandSafetyBlocked, setBrandSafetyBlocked] = useState<string[]>([]);
   const { categories } = useCategories();
   const [formData, setFormData] = useState({
     originalUrl: '',
@@ -61,12 +65,19 @@ export default function ContentProviderDashboard() {
       const links = data || [];
       setContentLinks(links);
 
-      // Fetch categories for all links
+      // Fetch categories and blocked categories for all links
       const catMap: Record<string, string[]> = {};
+      const blockedMap: Record<string, string[]> = {};
       await Promise.all(links.map(async (link) => {
-        catMap[link.id] = await getContentLinkCategoryIds(link.id);
+        const [cats, blocked] = await Promise.all([
+          getContentLinkCategoryIds(link.id),
+          getBlockedCategoryIds(link.id),
+        ]);
+        catMap[link.id] = cats;
+        blockedMap[link.id] = blocked;
       }));
       setLinkCategories(catMap);
+      setBlockedCategories(blockedMap);
     } catch (error) {
       toast.error('Failed to fetch content links');
     } finally {
@@ -127,10 +138,14 @@ export default function ContentProviderDashboard() {
       if (newLink && selectedCategories.length > 0) {
         await saveContentLinkCategories(newLink.id, selectedCategories);
       }
+      if (newLink && selectedBlocked.length > 0) {
+        await saveBlockedCategories(newLink.id, selectedBlocked);
+      }
 
       toast.success('Short link created successfully!');
       setFormData({ originalUrl: '', title: '', description: '' });
       setSelectedCategories([]);
+      setSelectedBlocked([]);
       setIsDialogOpen(false);
       fetchContentLinks();
     } catch (error) {
@@ -138,6 +153,19 @@ export default function ContentProviderDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openBrandSafety = (linkId: string) => {
+    setBrandSafetyLinkId(linkId);
+    setBrandSafetyBlocked(blockedCategories[linkId] || []);
+  };
+
+  const saveBrandSafety = async () => {
+    if (!brandSafetyLinkId) return;
+    await saveBlockedCategories(brandSafetyLinkId, brandSafetyBlocked);
+    toast.success('Brand safety settings saved!');
+    setBrandSafetyLinkId(null);
+    fetchContentLinks();
   };
 
   const copyToClipboard = (shortCode: string) => {
@@ -217,6 +245,11 @@ export default function ContentProviderDashboard() {
                   <Label>Categories</Label>
                   <CategoryPicker selected={selectedCategories} onChange={setSelectedCategories} />
                 </div>
+                <div>
+                  <Label>🛡️ Blocked Ad Categories (Brand Safety)</Label>
+                  <p className="text-xs text-muted-foreground mb-2">Ads in these categories will NOT be shown on this link</p>
+                  <CategoryPicker selected={selectedBlocked} onChange={setSelectedBlocked} />
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating...' : 'Create Short Link'}
                 </Button>
@@ -278,6 +311,7 @@ export default function ContentProviderDashboard() {
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Categories</TableHead>
+                  <TableHead>Blocked</TableHead>
                   <TableHead>Short Link</TableHead>
                   <TableHead>Views</TableHead>
                   <TableHead>Clicks</TableHead>
@@ -293,6 +327,9 @@ export default function ContentProviderDashboard() {
                       <CategoryBadges categoryIds={linkCategories[link.id] || []} categories={categories} />
                     </TableCell>
                     <TableCell>
+                      <CategoryBadges categoryIds={blockedCategories[link.id] || []} categories={categories} />
+                    </TableCell>
+                    <TableCell>
                       <code className="bg-muted px-2 py-1 rounded text-sm">/g/{link.short_code}</code>
                     </TableCell>
                     <TableCell>{link.view_count}</TableCell>
@@ -300,6 +337,9 @@ export default function ContentProviderDashboard() {
                     <TableCell>{new Date(link.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openBrandSafety(link.id)} title="Brand Safety">
+                          <ShieldAlert className="h-4 w-4" />
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => copyToClipboard(link.short_code)}>
                           <Copy className="h-4 w-4" />
                         </Button>
@@ -315,6 +355,22 @@ export default function ContentProviderDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Brand Safety Dialog */}
+      <Dialog open={!!brandSafetyLinkId} onOpenChange={(open) => !open && setBrandSafetyLinkId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>🛡️ Brand Safety Settings</DialogTitle>
+            <DialogDescription>
+              Select ad categories to block from showing on this content link
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <CategoryPicker selected={brandSafetyBlocked} onChange={setBrandSafetyBlocked} />
+            <Button onClick={saveBrandSafety} className="w-full">Save Brand Safety Settings</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
