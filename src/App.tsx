@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -9,8 +9,9 @@ import Index from '@/pages/Index';
 import Auth from '@/pages/Auth';
 import Dashboard from '@/pages/Dashboard';
 import Gateway from '@/pages/Gateway';
-import Admin from '@/pages/Admin';
 import './App.css';
+
+const Admin = lazy(() => import('@/pages/Admin'));
 
 const queryClient = new QueryClient();
 
@@ -59,7 +60,7 @@ function App() {
               element={user ? <Dashboard /> : <Navigate to="/auth" />} 
             />
             <Route path="/g/:shortCode" element={<Gateway />} />
-            <Route path="/admin" element={user ? <Admin /> : <Navigate to="/auth" />} />
+            <Route path="/admin" element={user ? <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div></div>}><Admin /></Suspense> : <Navigate to="/auth" />} />
           </Routes>
           <Toaster />
         </div>
