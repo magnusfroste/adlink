@@ -58,3 +58,20 @@ export async function saveAdCategories(advertisementId: string, categoryIds: str
     );
   }
 }
+
+export async function getBlockedCategoryIds(contentLinkId: string) {
+  const { data } = await supabase
+    .from('content_link_blocked_categories')
+    .select('category_id')
+    .eq('content_link_id', contentLinkId);
+  return (data || []).map(r => r.category_id);
+}
+
+export async function saveBlockedCategories(contentLinkId: string, categoryIds: string[]) {
+  await supabase.from('content_link_blocked_categories').delete().eq('content_link_id', contentLinkId);
+  if (categoryIds.length > 0) {
+    await supabase.from('content_link_blocked_categories').insert(
+      categoryIds.map(cid => ({ content_link_id: contentLinkId, category_id: cid }))
+    );
+  }
+}
