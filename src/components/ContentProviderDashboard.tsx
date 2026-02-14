@@ -10,17 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Plus, Copy, ExternalLink, RefreshCw } from 'lucide-react';
 import CounterMonitor from './CounterMonitor';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface ContentLink {
-  id: string;
-  original_url: string;
-  short_code: string;
-  title: string;
-  description: string | null;
-  views_count: number;
-  clicks_count: number;
-  created_at: string;
-}
+type ContentLink = Tables<'content_links'>;
 
 export default function ContentProviderDashboard() {
   const [contentLinks, setContentLinks] = useState<ContentLink[]>([]);
@@ -53,7 +45,7 @@ export default function ContentProviderDashboard() {
       const { data, error } = await supabase
         .from('content_links')
         .select('*')
-        .eq('content_provider_id', provider.id)
+        .eq('provider_id', provider.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -75,6 +67,15 @@ export default function ContentProviderDashboard() {
     await fetchContentLinks();
   };
 
+  const generateShortCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
   const handleCreateLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -91,15 +92,14 @@ export default function ContentProviderDashboard() {
 
       if (!provider) return;
 
-      // Generate short code
-      const { data: shortCodeData } = await supabase.rpc('generate_short_code');
-      
+      const shortCode = generateShortCode();
+
       const { error } = await supabase
         .from('content_links')
         .insert({
-          content_provider_id: provider.id,
+          provider_id: provider.id,
           original_url: formData.originalUrl,
-          short_code: shortCodeData,
+          short_code: shortCode,
           title: formData.title,
           description: formData.description || null,
         });
@@ -218,7 +218,7 @@ export default function ContentProviderDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {contentLinks.reduce((sum, link) => sum + link.views_count, 0)}
+              {contentLinks.reduce((sum, link) => sum + link.view_count, 0)}
             </div>
           </CardContent>
         </Card>
@@ -228,7 +228,7 @@ export default function ContentProviderDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {contentLinks.reduce((sum, link) => sum + link.clicks_count, 0)}
+              {contentLinks.reduce((sum, link) => sum + link.click_count, 0)}
             </div>
           </CardContent>
         </Card>
@@ -276,8 +276,8 @@ export default function ContentProviderDashboard() {
                         /g/{link.short_code}
                       </code>
                     </TableCell>
-                    <TableCell>{link.views_count}</TableCell>
-                    <TableCell>{link.clicks_count}</TableCell>
+                    <TableCell>{link.view_count}</TableCell>
+                    <TableCell>{link.click_count}</TableCell>
                     <TableCell>
                       {new Date(link.created_at).toLocaleDateString()}
                     </TableCell>
