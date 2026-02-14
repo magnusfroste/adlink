@@ -17,7 +17,6 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
   const [formData, setFormData] = useState({
     organizationName: '',
     websiteDomain: '',
-    contactEmail: '',
     companyName: '',
     websiteUrl: '',
   });
@@ -46,7 +45,7 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
             user_id: user.id,
             organization_name: formData.organizationName,
             website_domain: formData.websiteDomain,
-            contact_email: formData.contactEmail,
+            contact_email: user.email,
           });
 
         if (error) {
@@ -59,7 +58,7 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
           .insert({
             user_id: user.id,
             company_name: formData.companyName,
-            contact_email: formData.contactEmail,
+            contact_email: user.email,
             website_url: formData.websiteUrl,
           });
 
@@ -125,17 +124,6 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="contactEmail">Contact Email</Label>
-                  <Input
-                    id="contactEmail"
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                    placeholder="contact@technewsdaily.com"
-                    required
-                  />
-                </div>
               </>
             ) : (
               <>
@@ -156,17 +144,6 @@ export default function ProfileSetup({ onComplete }: ProfileSetupProps) {
                     value={formData.websiteUrl}
                     onChange={(e) => handleInputChange('websiteUrl', e.target.value)}
                     placeholder="https://techsolutions.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="contactEmail">Contact Email</Label>
-                  <Input
-                    id="contactEmail"
-                    type="email"
-                    value={formData.contactEmail}
-                    onChange={(e) => handleInputChange('contactEmail', e.target.value)}
-                    placeholder="ads@techsolutions.com"
-                    required
                   />
                 </div>
               </>
