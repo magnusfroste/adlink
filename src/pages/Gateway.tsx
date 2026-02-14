@@ -48,7 +48,7 @@ export default function Gateway() {
       setContentLink(contentData);
 
       const { data: adData, error: adError } = await supabase
-        .rpc('get_random_advertisement');
+        .rpc('get_random_advertisement_for_link', { p_content_link_id: contentData.id });
 
       if (adError || !adData) {
         setCountdown(0);

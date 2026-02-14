@@ -56,6 +56,39 @@ export type Database = {
           },
         ]
       }
+      advertisement_categories: {
+        Row: {
+          advertisement_id: string
+          category_id: string
+          id: string
+        }
+        Insert: {
+          advertisement_id: string
+          category_id: string
+          id?: string
+        }
+        Update: {
+          advertisement_id?: string
+          category_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisement_categories_advertisement_id_fkey"
+            columns: ["advertisement_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advertisement_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advertisements: {
         Row: {
           ad_type: string
@@ -145,6 +178,27 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       content_clicks: {
         Row: {
           advertisement_id: string | null
@@ -180,6 +234,39 @@ export type Database = {
           },
           {
             foreignKeyName: "content_clicks_content_link_id_fkey"
+            columns: ["content_link_id"]
+            isOneToOne: false
+            referencedRelation: "content_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_link_categories: {
+        Row: {
+          category_id: string
+          content_link_id: string
+          id: string
+        }
+        Insert: {
+          category_id: string
+          content_link_id: string
+          id?: string
+        }
+        Update: {
+          category_id?: string
+          content_link_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_link_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_link_categories_content_link_id_fkey"
             columns: ["content_link_id"]
             isOneToOne: false
             referencedRelation: "content_links"
@@ -316,6 +403,31 @@ export type Database = {
     Functions: {
       get_random_advertisement: {
         Args: never
+        Returns: {
+          ad_type: string
+          advertiser_id: string
+          budget: number
+          click_count: number
+          click_url: string
+          created_at: string
+          html_content: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          spent: number
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "advertisements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      get_random_advertisement_for_link: {
+        Args: { p_content_link_id: string }
         Returns: {
           ad_type: string
           advertiser_id: string

@@ -12,15 +12,20 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Plus, RefreshCw } from 'lucide-react';
 import CounterMonitor from './CounterMonitor';
+import CategoryPicker, { CategoryBadges } from './CategoryPicker';
+import { useCategories, saveAdCategories, getAdCategoryIds } from '@/hooks/useCategories';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Advertisement = Tables<'advertisements'>;
 
 export default function AdvertiserDashboard() {
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+  const [adCategories, setAdCategories] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const { categories } = useCategories();
   const [formData, setFormData] = useState({
     title: '',
     adType: 'image' as 'image' | 'html',
@@ -57,7 +62,14 @@ export default function AdvertiserDashboard() {
         return;
       }
 
-      setAdvertisements(data || []);
+      const ads = data || [];
+      setAdvertisements(ads);
+
+      const catMap: Record<string, string[]> = {};
+      await Promise.all(ads.map(async (ad) => {
+        catMap[ad.id] = await getAdCategoryIds(ad.id);
+      }));
+      setAdCategories(catMap);
     } catch (error) {
       toast.error('Failed to fetch advertisements');
     } finally {
@@ -87,7 +99,7 @@ export default function AdvertiserDashboard() {
 
       if (!advertiser) return;
 
-      const { error } = await supabase
+      const { data: newAd, error } = await supabase
         .from('advertisements')
         .insert({
           advertiser_id: advertiser.id,
@@ -96,21 +108,22 @@ export default function AdvertiserDashboard() {
           image_url: formData.adType === 'image' ? formData.imageUrl : null,
           html_content: formData.adType === 'html' ? formData.htmlContent : null,
           click_url: formData.clickUrl,
-        });
+        })
+        .select()
+        .single();
 
       if (error) {
         toast.error(error.message);
         return;
       }
 
+      if (newAd && selectedCategories.length > 0) {
+        await saveAdCategories(newAd.id, selectedCategories);
+      }
+
       toast.success('Advertisement created successfully!');
-      setFormData({
-        title: '',
-        adType: 'image',
-        imageUrl: '',
-        htmlContent: '',
-        clickUrl: '',
-      });
+      setFormData({ title: '', adType: 'image', imageUrl: '', htmlContent: '', clickUrl: '' });
+      setSelectedCategories([]);
       setIsDialogOpen(false);
       fetchAdvertisements();
     } catch (error) {
@@ -138,7 +151,7 @@ export default function AdvertiserDashboard() {
   if (loading && advertisements.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -147,8 +160,8 @@ export default function AdvertiserDashboard() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Advertiser Dashboard</h2>
-          <p className="text-gray-600">Manage your advertisements and track performance</p>
+          <h2 className="text-3xl font-bold text-foreground">Advertiser Dashboard</h2>
+          <p className="text-muted-foreground">Manage your advertisements and track performance</p>
         </div>
         
         <div className="flex gap-2">
@@ -167,9 +180,7 @@ export default function AdvertiserDashboard() {
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Create New Advertisement</DialogTitle>
-                <DialogDescription>
-                  Create a new ad that will be shown to content viewers
-                </DialogDescription>
+                <DialogDescription>Create a new ad that will be shown to content viewers</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateAd} className="space-y-4">
                 <div>
@@ -189,9 +200,7 @@ export default function AdvertiserDashboard() {
                     value={formData.adType} 
                     onValueChange={(value: 'image' | 'html') => setFormData(prev => ({ ...prev, adType: value }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="image">Image Advertisement</SelectItem>
                       <SelectItem value="html">HTML Advertisement</SelectItem>
@@ -237,6 +246,12 @@ export default function AdvertiserDashboard() {
                   />
                 </div>
 
+                <div>
+                  <Label>Target Categories</Label>
+                  <p className="text-xs text-muted-foreground mb-2">Select categories to target relevant content</p>
+                  <CategoryPicker selected={selectedCategories} onChange={setSelectedCategories} />
+                </div>
+
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating...' : 'Create Advertisement'}
                 </Button>
@@ -246,24 +261,19 @@ export default function AdvertiserDashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Ads</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{advertisements.length}</div>
-          </CardContent>
+          <CardContent><div className="text-2xl font-bold">{advertisements.length}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Views</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {advertisements.reduce((sum, ad) => sum + ad.view_count, 0)}
-            </div>
+            <div className="text-2xl font-bold">{advertisements.reduce((sum, ad) => sum + ad.view_count, 0)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -271,39 +281,29 @@ export default function AdvertiserDashboard() {
             <CardTitle className="text-sm font-medium">Total Clicks</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {advertisements.reduce((sum, ad) => sum + ad.click_count, 0)}
-            </div>
+            <div className="text-2xl font-bold">{advertisements.reduce((sum, ad) => sum + ad.click_count, 0)}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Counter Monitor */}
       <CounterMonitor />
 
-      {/* Advertisements Table */}
       <Card>
         <CardHeader>
           <CardTitle>Your Advertisements</CardTitle>
-          <CardDescription>
-            Manage and track your advertisement performance
-          </CardDescription>
+          <CardDescription>Manage and track your advertisement performance</CardDescription>
         </CardHeader>
         <CardContent>
           {advertisements.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">No advertisements created yet</p>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>Create Your First Ad</Button>
-                </DialogTrigger>
-              </Dialog>
+              <p className="text-muted-foreground mb-4">No advertisements created yet</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
+                  <TableHead>Categories</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Views</TableHead>
@@ -317,10 +317,9 @@ export default function AdvertiserDashboard() {
                   <TableRow key={ad.id}>
                     <TableCell className="font-medium">{ad.title}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {ad.ad_type.toUpperCase()}
-                      </Badge>
+                      <CategoryBadges categoryIds={adCategories[ad.id] || []} categories={categories} />
                     </TableCell>
+                    <TableCell><Badge variant="outline">{ad.ad_type.toUpperCase()}</Badge></TableCell>
                     <TableCell>
                       <Badge variant={ad.is_active ? 'default' : 'secondary'}>
                         {ad.is_active ? 'Active' : 'Inactive'}
@@ -328,15 +327,9 @@ export default function AdvertiserDashboard() {
                     </TableCell>
                     <TableCell>{ad.view_count}</TableCell>
                     <TableCell>{ad.click_count}</TableCell>
+                    <TableCell>{new Date(ad.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {new Date(ad.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => toggleAdStatus(ad.id, ad.is_active)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => toggleAdStatus(ad.id, ad.is_active)}>
                         {ad.is_active ? 'Deactivate' : 'Activate'}
                       </Button>
                     </TableCell>
