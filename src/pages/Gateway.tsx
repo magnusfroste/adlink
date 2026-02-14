@@ -1,25 +1,12 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface ContentLink {
-  id: string;
-  original_url: string;
-  title: string;
-  description: string | null;
-}
-
-interface Advertisement {
-  id: string;
-  title: string;
-  ad_type: 'image' | 'html';
-  image_url: string | null;
-  html_content: string | null;
-  click_url: string;
-}
+type ContentLink = Tables<'content_links'>;
+type Advertisement = Tables<'advertisements'>;
 
 export default function Gateway() {
   const { shortCode } = useParams();
@@ -31,18 +18,14 @@ export default function Gateway() {
 
   useEffect(() => {
     if (!shortCode) return;
-    
     fetchContentAndAd();
   }, [shortCode]);
 
   useEffect(() => {
     if (countdown > 0 && contentLink && advertisement) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
     } else if (countdown === 0 && contentLink) {
-      // Track the click and redirect
       trackClick();
       window.location.href = contentLink.original_url;
     }
@@ -50,7 +33,6 @@ export default function Gateway() {
 
   const fetchContentAndAd = async () => {
     try {
-      // Fetch content link
       const { data: contentData, error: contentError } = await supabase
         .from('content_links')
         .select('*')
@@ -65,12 +47,10 @@ export default function Gateway() {
 
       setContentLink(contentData);
 
-      // Fetch random advertisement
       const { data: adData, error: adError } = await supabase
         .rpc('get_random_advertisement');
 
       if (adError || !adData) {
-        // No ads available, redirect immediately
         setCountdown(0);
         setLoading(false);
         return;
@@ -78,13 +58,12 @@ export default function Gateway() {
 
       setAdvertisement(adData);
 
-      // Track ad impression
       await supabase
         .from('ad_impressions')
         .insert({
           advertisement_id: adData.id,
           content_link_id: contentData.id,
-          visitor_ip: null, // Could be obtained from a service
+          visitor_ip: null,
           user_agent: navigator.userAgent,
         });
 
@@ -132,7 +111,6 @@ export default function Gateway() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full space-y-6">
-        {/* Content Preview */}
         <Card>
           <CardContent className="p-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -148,13 +126,11 @@ export default function Gateway() {
           </CardContent>
         </Card>
 
-        {/* Advertisement */}
         {advertisement && (
           <Card>
             <CardContent className="p-6">
               <div className="text-center">
                 <p className="text-sm text-gray-500 mb-4">Advertisement</p>
-                
                 <div 
                   className="cursor-pointer transition-opacity hover:opacity-80"
                   onClick={handleAdClick}
@@ -177,7 +153,6 @@ export default function Gateway() {
                     </div>
                   )}
                 </div>
-                
                 <p className="text-xs text-gray-400 mt-2">
                   Click the ad to visit advertiser's website
                 </p>

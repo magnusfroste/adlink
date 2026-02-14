@@ -12,19 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Plus, RefreshCw } from 'lucide-react';
 import CounterMonitor from './CounterMonitor';
+import type { Tables } from '@/integrations/supabase/types';
 
-interface Advertisement {
-  id: string;
-  title: string;
-  ad_type: 'image' | 'html';
-  image_url: string | null;
-  html_content: string | null;
-  click_url: string;
-  status: 'active' | 'inactive' | 'pending';
-  views_count: number;
-  clicks_count: number;
-  created_at: string;
-}
+type Advertisement = Tables<'advertisements'>;
 
 export default function AdvertiserDashboard() {
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
@@ -106,7 +96,6 @@ export default function AdvertiserDashboard() {
           image_url: formData.adType === 'image' ? formData.imageUrl : null,
           html_content: formData.adType === 'html' ? formData.htmlContent : null,
           click_url: formData.clickUrl,
-          status: 'active',
         });
 
       if (error) {
@@ -131,12 +120,10 @@ export default function AdvertiserDashboard() {
     }
   };
 
-  const toggleAdStatus = async (adId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-    
+  const toggleAdStatus = async (adId: string, currentActive: boolean) => {
     const { error } = await supabase
       .from('advertisements')
-      .update({ status: newStatus })
+      .update({ is_active: !currentActive })
       .eq('id', adId);
 
     if (error) {
@@ -144,7 +131,7 @@ export default function AdvertiserDashboard() {
       return;
     }
 
-    toast.success(`Advertisement ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
+    toast.success(`Advertisement ${!currentActive ? 'activated' : 'deactivated'}`);
     fetchAdvertisements();
   };
 
@@ -275,7 +262,7 @@ export default function AdvertiserDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {advertisements.reduce((sum, ad) => sum + ad.views_count, 0)}
+              {advertisements.reduce((sum, ad) => sum + ad.view_count, 0)}
             </div>
           </CardContent>
         </Card>
@@ -285,7 +272,7 @@ export default function AdvertiserDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {advertisements.reduce((sum, ad) => sum + ad.clicks_count, 0)}
+              {advertisements.reduce((sum, ad) => sum + ad.click_count, 0)}
             </div>
           </CardContent>
         </Card>
@@ -335,14 +322,12 @@ export default function AdvertiserDashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={ad.status === 'active' ? 'default' : 'secondary'}
-                      >
-                        {ad.status}
+                      <Badge variant={ad.is_active ? 'default' : 'secondary'}>
+                        {ad.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{ad.views_count}</TableCell>
-                    <TableCell>{ad.clicks_count}</TableCell>
+                    <TableCell>{ad.view_count}</TableCell>
+                    <TableCell>{ad.click_count}</TableCell>
                     <TableCell>
                       {new Date(ad.created_at).toLocaleDateString()}
                     </TableCell>
@@ -350,9 +335,9 @@ export default function AdvertiserDashboard() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => toggleAdStatus(ad.id, ad.status)}
+                        onClick={() => toggleAdStatus(ad.id, ad.is_active)}
                       >
-                        {ad.status === 'active' ? 'Deactivate' : 'Activate'}
+                        {ad.is_active ? 'Deactivate' : 'Activate'}
                       </Button>
                     </TableCell>
                   </TableRow>

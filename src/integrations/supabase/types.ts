@@ -14,13 +14,313 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ad_impressions: {
+        Row: {
+          advertisement_id: string
+          content_link_id: string
+          created_at: string
+          id: string
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          advertisement_id: string
+          content_link_id: string
+          created_at?: string
+          id?: string
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          advertisement_id?: string
+          content_link_id?: string
+          created_at?: string
+          id?: string
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_impressions_advertisement_id_fkey"
+            columns: ["advertisement_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_impressions_content_link_id_fkey"
+            columns: ["content_link_id"]
+            isOneToOne: false
+            referencedRelation: "content_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      advertisements: {
+        Row: {
+          ad_type: string
+          advertiser_id: string
+          budget: number
+          click_count: number
+          click_url: string
+          created_at: string
+          html_content: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          spent: number
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          ad_type?: string
+          advertiser_id: string
+          budget?: number
+          click_count?: number
+          click_url: string
+          created_at?: string
+          html_content?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          spent?: number
+          title: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          ad_type?: string
+          advertiser_id?: string
+          budget?: number
+          click_count?: number
+          click_url?: string
+          created_at?: string
+          html_content?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          spent?: number
+          title?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisements_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      advertisers: {
+        Row: {
+          company_name: string
+          contact_email: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          website_url: string | null
+        }
+        Insert: {
+          company_name: string
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          website_url?: string | null
+        }
+        Update: {
+          company_name?: string
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      content_clicks: {
+        Row: {
+          advertisement_id: string | null
+          content_link_id: string
+          created_at: string
+          id: string
+          user_agent: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          advertisement_id?: string | null
+          content_link_id: string
+          created_at?: string
+          id?: string
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          advertisement_id?: string | null
+          content_link_id?: string
+          created_at?: string
+          id?: string
+          user_agent?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_clicks_advertisement_id_fkey"
+            columns: ["advertisement_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_clicks_content_link_id_fkey"
+            columns: ["content_link_id"]
+            isOneToOne: false
+            referencedRelation: "content_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_links: {
+        Row: {
+          click_count: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          original_url: string
+          provider_id: string
+          short_code: string
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          click_count?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          original_url: string
+          provider_id: string
+          short_code: string
+          title: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          click_count?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          original_url?: string
+          provider_id?: string
+          short_code?: string
+          title?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_links_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "content_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_providers: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          id: string
+          organization_name: string
+          updated_at: string
+          user_id: string
+          website_domain: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          organization_name: string
+          updated_at?: string
+          user_id: string
+          website_domain?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          organization_name?: string
+          updated_at?: string
+          user_id?: string
+          website_domain?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          user_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          user_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          user_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_random_advertisement: {
+        Args: never
+        Returns: {
+          ad_type: string
+          advertiser_id: string
+          budget: number
+          click_count: number
+          click_url: string
+          created_at: string
+          html_content: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          spent: number
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "advertisements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
