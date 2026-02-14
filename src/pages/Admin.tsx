@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import AdminContentProviderView from '@/components/admin/AdminContentProviderView';
+import AdminAdvertiserView from '@/components/admin/AdminAdvertiserView';
 
-type TabValue = 'providers' | 'advertisers' | 'links' | 'ads';
+type TabValue = 'providers' | 'advertisers' | 'links' | 'ads' | 'preview-cp' | 'preview-adv';
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -91,6 +93,8 @@ export default function Admin() {
     { value: 'advertisers', label: 'Advertisers' },
     { value: 'links', label: 'Content Links' },
     { value: 'ads', label: 'Advertisements' },
+    { value: 'preview-cp', label: '👁 CP Dashboard' },
+    { value: 'preview-adv', label: '👁 Adv Dashboard' },
   ];
 
   return (
@@ -279,6 +283,10 @@ export default function Admin() {
             </CardContent>
           </Card>
         )}
+
+        {activeTab === 'preview-cp' && <AdminContentProviderView />}
+
+        {activeTab === 'preview-adv' && <AdminAdvertiserView />}
       </main>
     </div>
   );
