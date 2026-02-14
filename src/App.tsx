@@ -9,6 +9,7 @@ import Index from '@/pages/Index';
 import Auth from '@/pages/Auth';
 import Dashboard from '@/pages/Dashboard';
 import Gateway from '@/pages/Gateway';
+import Admin from '@/pages/Admin';
 import './App.css';
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ function App() {
               element={user ? <Dashboard /> : <Navigate to="/auth" />} 
             />
             <Route path="/g/:shortCode" element={<Gateway />} />
+            <Route path="/admin" element={user ? <Admin /> : <Navigate to="/auth" />} />
           </Routes>
           <Toaster />
         </div>
