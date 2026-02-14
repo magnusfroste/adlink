@@ -4,15 +4,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+
+type TabValue = 'providers' | 'advertisers' | 'links' | 'ads';
 
 export default function Admin() {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabValue>('providers');
   const [contentProviders, setContentProviders] = useState<any[]>([]);
   const [advertisers, setAdvertisers] = useState<any[]>([]);
   const [contentLinks, setContentLinks] = useState<any[]>([]);
@@ -84,6 +86,13 @@ export default function Admin() {
 
   if (!isAdmin) return null;
 
+  const tabs: { value: TabValue; label: string }[] = [
+    { value: 'providers', label: 'Content Providers' },
+    { value: 'advertisers', label: 'Advertisers' },
+    { value: 'links', label: 'Content Links' },
+    { value: 'ads', label: 'Advertisements' },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b">
@@ -102,7 +111,6 @@ export default function Admin() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           {[
             { label: 'Content Providers', value: stats.providers },
@@ -121,148 +129,156 @@ export default function Admin() {
           ))}
         </div>
 
-        <Tabs defaultValue="providers">
-          <TabsList className="mb-4">
-            <TabsTrigger value="providers">Content Providers</TabsTrigger>
-            <TabsTrigger value="advertisers">Advertisers</TabsTrigger>
-            <TabsTrigger value="links">Content Links</TabsTrigger>
-            <TabsTrigger value="ads">Advertisements</TabsTrigger>
-          </TabsList>
+        {/* Tab buttons */}
+        <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground mb-4">
+          {tabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveTab(tab.value)}
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+                activeTab === tab.value
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'hover:bg-background/50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-          <TabsContent value="providers">
-            <Card>
-              <CardHeader><CardTitle>Content Providers</CardTitle></CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Organization</TableHead>
-                      <TableHead>Domain</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Created</TableHead>
+        {activeTab === 'providers' && (
+          <Card>
+            <CardHeader><CardTitle>Content Providers</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Organization</TableHead>
+                    <TableHead>Domain</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contentProviders.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.organization_name}</TableCell>
+                      <TableCell>{p.website_domain || '-'}</TableCell>
+                      <TableCell>{p.contact_email || '-'}</TableCell>
+                      <TableCell>{new Date(p.created_at).toLocaleDateString()}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contentProviders.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.organization_name}</TableCell>
-                        <TableCell>{p.website_domain || '-'}</TableCell>
-                        <TableCell>{p.contact_email || '-'}</TableCell>
-                        <TableCell>{new Date(p.created_at).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    ))}
-                    {contentProviders.length === 0 && (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No content providers yet</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  ))}
+                  {contentProviders.length === 0 && (
+                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No content providers yet</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
-          <TabsContent value="advertisers">
-            <Card>
-              <CardHeader><CardTitle>Advertisers</CardTitle></CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Company</TableHead>
-                      <TableHead>Website</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Created</TableHead>
+        {activeTab === 'advertisers' && (
+          <Card>
+            <CardHeader><CardTitle>Advertisers</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Website</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {advertisers.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.company_name}</TableCell>
+                      <TableCell>{a.website_url || '-'}</TableCell>
+                      <TableCell>{a.contact_email || '-'}</TableCell>
+                      <TableCell>{new Date(a.created_at).toLocaleDateString()}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {advertisers.map((a) => (
-                      <TableRow key={a.id}>
-                        <TableCell className="font-medium">{a.company_name}</TableCell>
-                        <TableCell>{a.website_url || '-'}</TableCell>
-                        <TableCell>{a.contact_email || '-'}</TableCell>
-                        <TableCell>{new Date(a.created_at).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    ))}
-                    {advertisers.length === 0 && (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No advertisers yet</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  ))}
+                  {advertisers.length === 0 && (
+                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No advertisers yet</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
-          <TabsContent value="links">
-            <Card>
-              <CardHeader><CardTitle>Content Links</CardTitle></CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Short Code</TableHead>
-                      <TableHead>Views</TableHead>
-                      <TableHead>Clicks</TableHead>
-                      <TableHead>Active</TableHead>
-                      <TableHead>Created</TableHead>
+        {activeTab === 'links' && (
+          <Card>
+            <CardHeader><CardTitle>Content Links</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Short Code</TableHead>
+                    <TableHead>Views</TableHead>
+                    <TableHead>Clicks</TableHead>
+                    <TableHead>Active</TableHead>
+                    <TableHead>Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contentLinks.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="font-medium">{l.title}</TableCell>
+                      <TableCell><code>{l.short_code}</code></TableCell>
+                      <TableCell>{l.view_count}</TableCell>
+                      <TableCell>{l.click_count}</TableCell>
+                      <TableCell><Badge variant={l.is_active ? 'default' : 'secondary'}>{l.is_active ? 'Yes' : 'No'}</Badge></TableCell>
+                      <TableCell>{new Date(l.created_at).toLocaleDateString()}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contentLinks.map((l) => (
-                      <TableRow key={l.id}>
-                        <TableCell className="font-medium">{l.title}</TableCell>
-                        <TableCell><code>{l.short_code}</code></TableCell>
-                        <TableCell>{l.view_count}</TableCell>
-                        <TableCell>{l.click_count}</TableCell>
-                        <TableCell><Badge variant={l.is_active ? 'default' : 'secondary'}>{l.is_active ? 'Yes' : 'No'}</Badge></TableCell>
-                        <TableCell>{new Date(l.created_at).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    ))}
-                    {contentLinks.length === 0 && (
-                      <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No content links yet</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  ))}
+                  {contentLinks.length === 0 && (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No content links yet</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
-          <TabsContent value="ads">
-            <Card>
-              <CardHeader><CardTitle>Advertisements</CardTitle></CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Budget</TableHead>
-                      <TableHead>Spent</TableHead>
-                      <TableHead>Views</TableHead>
-                      <TableHead>Clicks</TableHead>
-                      <TableHead>Active</TableHead>
+        {activeTab === 'ads' && (
+          <Card>
+            <CardHeader><CardTitle>Advertisements</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Budget</TableHead>
+                    <TableHead>Spent</TableHead>
+                    <TableHead>Views</TableHead>
+                    <TableHead>Clicks</TableHead>
+                    <TableHead>Active</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {advertisements.map((ad) => (
+                    <TableRow key={ad.id}>
+                      <TableCell className="font-medium">{ad.title}</TableCell>
+                      <TableCell>{ad.ad_type}</TableCell>
+                      <TableCell>${Number(ad.budget).toFixed(2)}</TableCell>
+                      <TableCell>${Number(ad.spent).toFixed(2)}</TableCell>
+                      <TableCell>{ad.view_count}</TableCell>
+                      <TableCell>{ad.click_count}</TableCell>
+                      <TableCell><Badge variant={ad.is_active ? 'default' : 'secondary'}>{ad.is_active ? 'Yes' : 'No'}</Badge></TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {advertisements.map((ad) => (
-                      <TableRow key={ad.id}>
-                        <TableCell className="font-medium">{ad.title}</TableCell>
-                        <TableCell>{ad.ad_type}</TableCell>
-                        <TableCell>${Number(ad.budget).toFixed(2)}</TableCell>
-                        <TableCell>${Number(ad.spent).toFixed(2)}</TableCell>
-                        <TableCell>{ad.view_count}</TableCell>
-                        <TableCell>{ad.click_count}</TableCell>
-                        <TableCell><Badge variant={ad.is_active ? 'default' : 'secondary'}>{ad.is_active ? 'Yes' : 'No'}</Badge></TableCell>
-                      </TableRow>
-                    ))}
-                    {advertisements.length === 0 && (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No advertisements yet</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                  ))}
+                  {advertisements.length === 0 && (
+                    <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No advertisements yet</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );
