@@ -104,7 +104,7 @@ export default function Index() {
             Ready to Start Monetizing Your Content?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join thousands of content providers and advertisers already using AdLink
+            Create shareable ad-supported links and track views, clicks and engagement from one dashboard
           </p>
           <Link to="/auth">
             <Button size="lg" variant="secondary">
