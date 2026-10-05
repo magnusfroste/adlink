@@ -1,0 +1,11 @@
+# Adlink
+
+> Share content and get paid: turn paywalled content into shareable, ad-supported links.
+
+Adlink lets content providers wrap paywalled content in a shareable link that unlocks after an ad is shown. Providers earn from engagement, advertisers reach targeted audiences, and both get real-time analytics from a dashboard.
+
+Built for publishers and creators who want to monetize premium content, and for advertisers looking for engaged audiences.
+
+## Links
+
+- [Adlink](https://adlink.lovable.app/): Landing page and sign-up.
